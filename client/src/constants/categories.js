@@ -1,0 +1,1 @@
+export const CATEGORIES = ["All", "Business", "Career", "Design", "Health", "Marketing", "Technology"];
