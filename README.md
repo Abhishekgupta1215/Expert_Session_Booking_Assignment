@@ -1,64 +1,83 @@
 # Real-Time Expert Session Booking System
 
-Full-stack booking system built with React (web), Node.js, Express, MongoDB, and Socket.io.
+Full-stack booking system built with React (web), Node.js, Express, MongoDB (Atlas supported), and Socket.io for real-time updates.
 
-## Features
+## Quick start
 
-- Expert listing with search, category filter, pagination, and loading/error states.
-- Expert detail view with grouped availability by date.
-- Booking flow with validation, success feedback, and duplicate-slot protection.
-- My bookings view by email with Pending, Confirmed, and Completed statuses.
-- Real-time slot refresh when a booking is created elsewhere.
+1. Copy environment examples and populate secrets:
 
-## Tech Stack
+	- `server/.env` (example in `server/.env.example`) — set `MONGODB_URI`, `PORT`, and `CLIENT_ORIGIN`.
+	- `client/.env` (example in `client/.env.example`) — set `VITE_API_URL` and `VITE_SOCKET_URL`.
 
-- Frontend: React + Vite + React Router + Socket.io client
-- Backend: Node.js + Express + MongoDB + Mongoose + Socket.io
-
-## Project Structure
-
-- `client/` React web app
-- `server/` Express API and Socket.io server
-
-## Environment Variables
-
-Create `server/.env`:
-
-```env
-PORT=5000
-MONGODB_URI=mongodb://127.0.0.1:27017/expert-booking
-CLIENT_ORIGIN=http://localhost:5173
-```
-
-Create `client/.env`:
-
-```env
-VITE_API_URL=http://localhost:5000/api
-VITE_SOCKET_URL=http://localhost:5000
-```
-
-## Install
+2. Install dependencies (root workspace):
 
 ```bash
 npm install
 ```
 
-## Run
+3. Run development servers in two terminals:
 
-Start the backend:
-
+Backend:
 ```bash
 npm run dev:server
 ```
 
-Start the frontend in another terminal:
-
+Frontend:
 ```bash
 npm run dev:client
 ```
 
-## Booking Rules
+Open the app at http://localhost:5173
 
-- The backend prevents double booking with a unique compound index on `expertId + date + timeSlot`.
-- If two users submit the same slot at the same time, one request succeeds and the other receives a `409 Conflict` response.
-- After a successful booking, the server emits a Socket.io event so open detail screens refresh available slots immediately.
+## Environment variables
+
+server/.env (required)
+
+```env
+PORT=5000
+# Example MongoDB Atlas URI (replace <user>, <password>, and <db>):
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.qiddv8s.mongodb.net/<db>?retryWrites=true&w=majority
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+client/.env (required for dev)
+
+```env
+# Base API URL (note: includes the /api prefix used by the server)
+VITE_API_URL=http://localhost:5000/api
+# Socket.io server URL
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+## API endpoints
+
+- `GET /api/experts` — list experts (supports `search`, `category`, `page`, `limit` query params)
+- `GET /api/experts/:id` — expert details (includes availability snapshot)
+- `POST /api/bookings` — create booking; payload: `{ expertId, name, email, phone, date, timeSlot, notes }`
+- `PATCH /api/bookings/:id/status` — update booking status (`Pending|Confirmed|Completed`)
+- `GET /api/bookings?email=` — list bookings for an email
+
+## Real-time events (Socket.io)
+
+- `slot-booked` — emitted when a new booking is created; payload `{ expertId, date, timeSlot }`
+- `booking-status-updated` — emitted when a booking status changes; payload `{ bookingId, status }`
+
+## Important details
+
+- Double-booking prevention: the `Booking` model enforces a unique compound index on `(expertId, date, timeSlot)` so concurrent requests cannot create conflicting bookings. The API surfaces a `409`/`11000` duplicate-key error when a slot is already taken.
+- Seeding: the server automatically seeds sample experts if the experts collection is empty on startup.
+
+## Build for production
+
+```bash
+npm run build
+```
+
+This builds the client into `client/dist/` (ready to serve) and keeps the server code in `server/` for deployment.
+
+## Troubleshooting
+
+- If the backend fails to connect to MongoDB, verify `MONGODB_URI` and network access (Atlas IP whitelist or use 0.0.0.0/0 for testing).
+- Ensure the client env vars use the `VITE_` prefix so Vite exposes them to the browser.
+
+If you'd like, I can also add a condensed API reference file or open a PR with these changes.
